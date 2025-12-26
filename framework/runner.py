@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # --- framework/runner.py | checksum: auto ---
-import argparse, json, sys, importlib.util, os, traceback
+import argparse, json, sys, importlib.util, os, traceback, re
 from pathlib import Path
 
 tools_dir = "tools"
@@ -10,6 +10,11 @@ def low(o):
   if isinstance(o, list): return [low(i) for i in o]
   if isinstance(o, dict): return {k.lower(): low(v) for k, v in o.items()}
   return o
+
+def compact(j):
+  j = re.sub(r'\{\n\s+"file": "(.*?)",\n\s+"hash": "(.*?)"\n\s+\}', r'{ "file": "\1", "hash": "\2" }', j)
+  j = re.sub(r'\[\n\s+("(.*?)")\n\s+\]', r'[\1]', j)
+  return j
 
 def main():
   os.environ["pythondontwritebytecode"] = "1"
@@ -36,11 +41,12 @@ def main():
   os.chdir(root.parent)
   try:
     res = {"tools": sorted(list(reg.keys()))} if args.cmd == "list" else reg[args.cmd](args)
-    sys.stdout.write(json.dumps(low(res), indent=2))
+    raw = json.dumps(low(res), indent=2, separators=(',', ': '))
+    sys.stdout.write(compact(raw) + "\n")
   except Exception as e:
     err = {"status": "error", "msg": str(e).lower()}
     if args.debug: err["trace"] = traceback.format_exc().lower()
-    sys.stdout.write(json.dumps(low(err), indent=2))
+    sys.stdout.write(json.dumps(low(err), indent=2) + "\n")
 
 if __name__ == "__main__":
   main()
