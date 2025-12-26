@@ -1,13 +1,10 @@
 import json
-import re
-import sys
+import os
 import argparse
-import csv
 from pathlib import Path
 from typing import List, Dict, Any, Set
 
 COMPACT_THRESHOLD = 80
-
 
 def extract_keys(data, keys: Set[str] = None):
   if keys is None:
@@ -21,7 +18,6 @@ def extract_keys(data, keys: Set[str] = None):
     for item in data:
       extract_keys(item, keys)
   return keys
-
 
 def generate_keymap_optimized(all_keys: Set[str]) -> Dict[str, str]:
   sorted_keys = sorted(all_keys, key=len)
@@ -55,7 +51,6 @@ def generate_keymap_optimized(all_keys: Set[str]) -> Dict[str, str]:
       used.add(key)
   return keymap
 
-
 def find_files(paths: List[str]) -> List[Path]:
   results = []
   for path_str in paths:
@@ -66,7 +61,6 @@ def find_files(paths: List[str]) -> List[Path]:
       results.extend(path.rglob("*.json"))
       results.extend(path.rglob("*.csv"))
   return sorted(set(results))
-
 
 class MinimalKeyAbbreviator:
   def __init__(self, key_map: Dict[str, str] = None):
@@ -105,7 +99,6 @@ class MinimalKeyAbbreviator:
   def get_new_mappings(self) -> Dict[str, str]:
     return self.new_mappings
 
-
 class SmartFormatter:
   @staticmethod
   def smart_format(obj: Any, indent=0, threshold=COMPACT_THRESHOLD):
@@ -133,7 +126,6 @@ class SmartFormatter:
       inner = (",\n" + " " * (indent + 2)).join(items)
       return f"{{\n{' ' * (indent + 2)}{inner}\n{' ' * indent}}}"
     return json.dumps(obj)
-
 
 class KeyedJSONConverter:
   @staticmethod
@@ -182,7 +174,6 @@ class KeyedJSONConverter:
         rec[f] = val
       records.append(rec)
     return records
-
 
 class OptimizationEngine:
   def __init__(self, data: Any, abbrev: MinimalKeyAbbreviator = None):
@@ -287,83 +278,12 @@ class OptimizationEngine:
   def get_optimizations_summary(self):
     return ", ".join(self.optimizations) if self.optimizations else "null"
 
-
-def apply_anchors(k: str, d: Any, ll: List[str], sl: List[str]):
-  if not isinstance(d, dict):
-    return d, None
-  c = 0
-  if k in ll:
-    c = len([x for x in d.keys() if x != "__LENGTH__"])
-  elif k in sl:
-    c = sum(v.get("__LENGTH__", 0) for v in d.values() if isinstance(v, dict))
-  else:
-    return d, None
-  d["__LENGTH__"] = c
-  return d, c
-
-
-def extract_merge(raw: str) -> Dict[str, Any]:
-  t = raw.lstrip("\ufeff")
-  t = re.sub(r"//.*?\n|/\*.*?\*/", "", t, flags=re.DOTALL)
-  t = re.sub(r",(\s*[}\]])", r"\1", t)
-  t = re.sub(r"'([^'\"\\]*)'", r'"\1"', t)
-  t = re.sub(r'([}\]"\d])\s*\n(\s*["{\[\d])', r"\1,\n\2", t).strip()
-  dec = json.JSONDecoder()
-  objs = []
-  idx = 0
-  while idx < len(t):
-    ch = t[idx:].lstrip()
-    if not ch:
-      break
-    if not ch.startswith(("{", "[")):
-      idx += 1
-      continue
-    try:
-      o, e = dec.raw_decode(ch)
-      objs.append(o)
-      idx += len(t[idx:]) - len(ch) + e
-    except json.JSONDecodeError:
-      idx += 1
-  if not objs:
-    return {}
-  if len(objs) == 1:
-    return objs[0]
-  merged = {}
-  for o in objs:
-    if isinstance(o, dict):
-      merged.update(o)
-  return merged
-
-
-def unnest(d: Any, pk: str = "") -> Dict[str, Any]:
-  res = {}
-  if isinstance(d, dict):
-    for k, v in d.items():
-      if k.startswith("_") or k == "manifest":
-        continue
-      nk = f"{pk}_{k}" if pk else k
-      if isinstance(v, dict) and any(not x.startswith("_") for x in v.keys()):
-        res.update(unnest(v, nk))
-      else:
-        res[nk] = v
-  elif isinstance(d, list):
-    for i, item in enumerate(d):
-      nk = f"{pk}_{i}" if pk else str(i)
-      if isinstance(item, (dict, list)):
-        res.update(unnest(item, nk))
-      else:
-        res[nk] = item
-  else:
-    res[pk] = d
-  return res
-
-
 def setup_arguments(subparser):
   subparser.add_argument(
     "mode",
     nargs="?",
     default="minify",
-    choices=["scan", "minify", "expand", "nest", "unnest"],
+    choices=["scan", "minify", "expand"],
   )
   subparser.add_argument("input", nargs="+")
   subparser.add_argument("-o", "--output", type=Path)
@@ -374,12 +294,6 @@ def setup_arguments(subparser):
   subparser.add_argument("--bool-compress", action="store_true")
   subparser.add_argument("--flatten", action="store_true")
   subparser.add_argument("--keyed", type=str, nargs="?", const="__first__")
-  subparser.add_argument("--length", nargs="*", default=[])
-  subparser.add_argument("--sum", nargs="*", default=[])
-  subparser.add_argument("--wrap", type=str)
-  subparser.add_argument("--flat", action="store_true")
-  #subparser.add_argument("--silent", action="store_true", help="Suppress non-error output")
-
 
 def run_task(args, context=None):
   try:
@@ -500,61 +414,6 @@ def run_task(args, context=None):
         except Exception as e:
           results.append({"file": fp.name, "error": str(e)})
       return {"mode": "expand", "files_processed": len(files), "results": results}
-
-    elif args.mode == "nest":
-      files = find_files(args.input)
-      if not files:
-        return {"error": "No JSON files found"}
-      nd = {}
-      mani = {}
-      for tg in files:
-        try:
-          d = extract_merge(tg.read_text(encoding="utf-8"))
-          if not d:
-            continue
-          k = d.pop("key") if isinstance(d, dict) and "key" in d else tg.stem
-          if isinstance(d, dict) and len(d) == 1 and k in d:
-            d = d[k]
-          if args.flat and isinstance(d, dict):
-            nd.update(d)
-          else:
-            nd[k] = d
-        except Exception:
-          pass
-      if not args.flat:
-        for k in nd:
-          ct, cn = apply_anchors(k, nd[k], args.length, args.sum)
-          if cn is not None:
-            mani[f"{k}_total"] = cn
-            nd[k] = ct
-      wr = json.loads(args.wrap) if args.wrap else {}
-      fn = {**wr, "manifest": mani, **nd} if not args.flat else {**wr, **nd}
-      if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(fn, indent=2), encoding="utf-8")
-        return {
-          "mode": "nest",
-          "files_merged": len(files),
-          "output_file": str(args.output),
-        }
-      else:
-        return {"mode": "nest", "files_merged": len(files), "data": fn}
-
-    elif args.mode == "unnest":
-      if not args.input or not Path(args.input[0]).exists():
-        return {"error": "Input file required for unnest mode"}
-      d = json.loads(Path(args.input[0]).read_text(encoding="utf-8"))
-      flat = unnest(d)
-      if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(flat, indent=2), encoding="utf-8")
-        return {
-          "mode": "unnest",
-          "keys_flattened": len(flat),
-          "output_file": str(args.output),
-        }
-      else:
-        return {"mode": "unnest", "keys_flattened": len(flat), "data": flat}
 
   except Exception as e:
     return {"error": str(e), "error_type": type(e).__name__}

@@ -66,7 +66,35 @@ def collect_json_files(paths: List[str]) -> List[Path]:
             files.extend([f for f in sorted(path_obj.glob("**/*.json")) if f.name != "protocol-schema.json"])
     return sorted(set(files))
 
+def unnest(d: Any, pk: str = "") -> Dict[str, Any]:
+    res = {}
+    if isinstance(d, dict):
+        for k, v in d.items():
+            if k.startswith("_") or k == "manifest":
+                continue
+            nk = f"{pk}_{k}" if pk else k
+            if isinstance(v, dict) and any(not x.startswith("_") for x in v.keys()):
+                res.update(unnest(v, nk))
+            else:
+                res[nk] = v
+    elif isinstance(d, list):
+        for i, item in enumerate(d):
+            nk = f"{pk}_{i}" if pk else str(i)
+            if isinstance(item, (dict, list)):
+                res.update(unnest(item, nk))
+            else:
+                res[nk] = item
+    else:
+        res[pk] = d
+    return res
+
 def setup_arguments(subparser):
+    subparser.add_argument(
+        "mode",
+        nargs="?",
+        default="nest",
+        choices=["nest", "unnest"],
+    )
     subparser.add_argument("paths", nargs="+")
     subparser.add_argument("-o", "--output", required=True, type=Path)
     subparser.add_argument("--length", nargs="*", default=[])
@@ -77,47 +105,62 @@ def setup_arguments(subparser):
 
 def run_task(args, context=None):
     try:
-        l_set = set(args.length) if args.length else set()
-        s_set = set(args.sum) if args.sum else set()
-        overlap = l_set & s_set
-        if overlap:
-            sys.stderr.write(f"ERROR: Conflict: keys {list(overlap)} cannot be in both --length and --sum\n")
-            return {"status": "error", "err": f"Conflict: keys {list(overlap)} cannot be in both --length and --sum"}
-        files = collect_json_files(args.paths)
-        if not files: return {"error": "No JSON files found"}
-        nested_data, manifest = {}, {}
-        identity = Path(args.paths[0]).name if Path(args.paths[0]).is_dir() else Path(args.output).stem
-        for target in files:
-            try:
-                content = extract_and_merge_json(target.read_text(encoding="utf-8"))
-                if not content: continue
-                key = content.pop("key") if isinstance(content, dict) and "key" in content else target.stem
-                if isinstance(content, dict) and len(content) == 1 and key in content: content = content[key]
-                if args.flat and isinstance(content, dict): nested_data.update(content)
-                else: nested_data[key] = content
-            except Exception as e: sys.stderr.write(f"SKIP: {target.name} | {str(e)}\n")
-        if not args.flat:
-            if identity.startswith(args.auto_sum_prefix):
-                s_set.add(identity)
-            for key in list(nested_data.keys()):
-                content, count = apply_anchors(key, nested_data[key], l_set, s_set)
-                if key in s_set: manifest[f"{key}_total"] = count
-                nested_data[key] = content
-            nested_data, root_count = apply_anchors(identity, nested_data, l_set, s_set)
-            if identity in s_set: manifest[f"{identity}_total"] = root_count
-        wrapper = json.loads(args.wrap) if args.wrap else {}
-        final_output = {**wrapper, "manifest": manifest, **nested_data} if not args.flat else {**wrapper, **nested_data}
-        if not manifest: final_output.pop("manifest", None)
-        if isinstance(final_output, dict) and not args.flat:
-            if s_set:
-                final_output["__LENGTH__"] = sum(v.get("__LENGTH__", 0) for k, v in final_output.items() if isinstance(v, dict) and k != "manifest")
-            else:
-                final_output["__LENGTH__"] = len([k for k in final_output.keys() if k not in ("__LENGTH__", "manifest")])
-        out_path = Path(args.output)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps(final_output, indent=2, ensure_ascii=False), encoding="utf-8")
-        return {"mode": "nest", "files_merged": len(files), "output_file": str(out_path)}
-    except Exception as e: return {"error": str(e)}
+        if args.mode == "nest":
+            files = collect_json_files(args.paths)
+            if not files:
+                return {"error": "No JSON files found"}
+            nested_data, manifest = {}, {}
+            identity = Path(args.paths[0]).name if Path(args.paths[0]).is_dir() else Path(args.output).stem
+            
+            for target in files:
+                try:
+                    content = extract_and_merge_json(target.read_text(encoding="utf-8"))
+                    if not content: continue
+                    key = content.pop("key") if isinstance(content, dict) and "key" in content else target.stem
+                    if isinstance(content, dict) and len(content) == 1 and key in content: content = content[key]
+                    if args.flat and isinstance(content, dict):
+                        nested_data.update(content)
+                    else:
+                        nested_data[key] = content
+                except Exception as e:
+                    sys.stderr.write(f"SKIP: {target.name} | {str(e)}\n")
+            
+            if not args.flat:
+                if identity.startswith(args.auto_sum_prefix):
+                    args.sum.append(identity)
+                for key in list(nested_data.keys()):
+                    content, count = apply_anchors(key, nested_data[key], args.length, args.sum)
+                    if key in args.sum:
+                        manifest[f"{key}_total"] = count
+                    nested_data[key] = content
+                nested_data, root_count = apply_anchors(identity, nested_data, args.length, args.sum)
+                if identity in args.sum:
+                    manifest[f"{identity}_total"] = root_count
+            
+            wrapper = json.loads(args.wrap) if args.wrap else {}
+            final_output = {**wrapper, "manifest": manifest, **nested_data} if not args.flat else {**wrapper, **nested_data}
+            if not manifest: final_output.pop("manifest", None)
+            if isinstance(final_output, dict) and not args.flat:
+                if args.sum:
+                    final_output["__LENGTH__"] = sum(v.get("__LENGTH__", 0) for k, v in final_output.items() if isinstance(v, dict) and k != "manifest")
+                else:
+                    final_output["__LENGTH__"] = len([k for k in final_output.keys() if k not in ("__LENGTH__", "manifest")])
+            
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(final_output, indent=2, ensure_ascii=False), encoding="utf-8")
+            return {"mode": "nest", "files_merged": len(files), "output_file": str(args.output)}
+
+        elif args.mode == "unnest":
+            if not args.paths or not Path(args.paths[0]).exists():
+                return {"error": "Input file required for unnest mode"}
+            d = json.loads(Path(args.paths[0]).read_text(encoding="utf-8"))
+            flat = unnest(d)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(flat, indent=2, ensure_ascii=False), encoding="utf-8")
+            return {"mode": "unnest", "keys_flattened": len(flat), "output_file": str(args.output)}
+
+    except Exception as e:
+        return {"error": str(e), "error_type": type(e).__name__}
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
