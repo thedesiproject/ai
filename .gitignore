@@ -1,0 +1,20 @@
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.Python
+
+# ruff linter cache
+.ruff_cache/
+
+# osx
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
