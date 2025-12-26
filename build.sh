@@ -33,39 +33,39 @@ done
 
 echo "🔨 aggregating stage protocols..."
 for llm in chatgpt gemini perplexity; do
-  STAGES=$(ls "$BUILD_DIR"/protocols/s*"$llm"*.json 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.json//')
-  [ -z "$STAGES" ] && continue
   python3 main.py --silent nest-json "$BUILD_DIR"/protocols/s*"$llm"*.json \
     -o "$BUILD_DIR/protocols/protocols-$llm.json" \
     --sum $STAGES
+  rm -f "$BUILD_DIR"/protocols/s*"$llm".json
 done
 
 echo "🔨 finalizing session payloads..."
-#for llm in chatgpt gemini perplexity; do
-#  python3 main.py --silent nest-json \
-#    "$BUILD_DIR/protocols/orchestration-$llm.json" \
-#    rules.json \
-#    "$BUILD_DIR/protocols/protocol-schema.json" \
-#    "$BUILD_DIR/protocols/protocols-$llm.json" \
-#    -o "$BUILD_DIR/dist/$llm/session.json" \
-#    --length rules \
-#    --sum protocols \
-#    --wrap "{\"metadata\":{\"type\":\"orchestration-control-plan\"}}"
-#  echo "  ✅ $llm master-payload.json created"
-#done
+for llm in chatgpt gemini perplexity; do
+  mkdir -p "$BUILD_DIR/dist/$llm"
+  python3 main.py --silent nest-json \
+    "$BUILD_DIR/protocols/orchestration-$llm.json" \
+    rules.json \
+    "$BUILD_DIR/protocols/protocol-schema.json" \
+    "$BUILD_DIR/protocols/protocols-$llm.json" \
+    -o "$BUILD_DIR/dist/$llm/session.json" \
+    --length rules \
+    --sum protocols-$llm \
+    --wrap "{\"metadata\":{\"type\":\"orchestration-control-plan\"}}"
+  echo "  ✅ ./build/protocols/ $llm master-payload.json created"
+done
 
-#python3 scripts/nest-json.py build/protocols/{orchestration,kernel-contract,states,validators,gates,locked-rules}.json \
-#  -o "$PROTOCOLS_DIR/master-payload.json" \
-#  --wrap '{"metadata":{"version":"7.1.0","type":"state-kernel-control-plane"}}'
+echo "🔨 validating, auto-fixing outputs..."
+python3 main.py --silent verify-json ./build/protocols/ -a
 
-echo "🔨 finalizing master payloads..."
+#echo "🔨 finalizing master payloads..."
 #python3 scripts/nest-json.py \
 #   build/protocols/{orchestration,kernel-contract,states,validators,gates,locked-rules}.json -o build/protocols/master-payload.json --wrap '{"metadata":{"version":"7.1.0","type":"state-kernel-control-plane"}}'
 
 echo "🚀 final packaging..."
-# python3 main.py --silent build_mega -o "$DIST_DIR/mega.py"
+python3 main.py --silent build-bundle -o "$BUILD_DIR/dist/bundle.py"
+echo "  ✅ ./build/dist/bundle.json created"
 
 echo "🔨 creating session xml from master payload..."
 # python3 scripts/package-session.py "$DIST_DIR/master.json" -o "$DIST_DIR/"
 
-echo "✅ Build and packaging complete: $DIST_DIR/mega.py, $DIST_DIR/context.xml"
+echo "✅ Build and packaging complete: $DIST_DIR/context.xml"

@@ -7,10 +7,14 @@ from typing import List, Dict, Any
 
 def recursive_sum(data):
     if not isinstance(data, dict): return 0
-    total = data.get("__LENGTH__", 0)
+    total = 0
     for k, v in data.items():
-        if k != "__LENGTH__" and isinstance(v, dict):
-            total += recursive_sum(v)
+        if k == "__LENGTH__" or k == "manifest": continue
+        if isinstance(v, dict):
+            if "__LENGTH__" in v:
+                total += v["__LENGTH__"]
+            else:
+                total += recursive_sum(v)
     return total
 
 def apply_anchors(key, data, l_list, s_list):
@@ -92,6 +96,8 @@ def run_task(args, context=None):
                 else: nested_data[key] = content
             except Exception as e: sys.stderr.write(f"SKIP: {target.name} | {str(e)}\n")
         if not args.flat:
+            if identity.startswith("protocols-"):
+                s_set.add(identity)
             for key in list(nested_data.keys()):
                 content, count = apply_anchors(key, nested_data[key], l_set, s_set)
                 if key in s_set: manifest[f"{key}_total"] = count

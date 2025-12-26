@@ -8,7 +8,7 @@ def load_plugins(d="plugins"):
     if os.path.exists(d):
         for f in sorted([f for f in os.listdir(d) if f.endswith(".py") and not f.startswith("_")]):
             try:
-                name = f[:-3]
+                name = f[:-3].replace('-', '_')
                 path = os.path.join(d, f)
                 spec = importlib.util.spec_from_file_location(name, path)
                 mod = importlib.util.module_from_spec(spec)
@@ -25,10 +25,10 @@ def main():
         sys.exit(1)
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("--silent", action="store_true")
-    parser.add_argument("cmd", choices=plugins.keys())
+    parser.add_argument("cmd", choices=[k.replace('_', '-') for k in plugins.keys()])
     parser.add_argument("subargs", nargs=argparse.REMAINDER)
     args = parser.parse_args()
-    plugin = plugins[args.cmd]
+    plugin = plugins[args.cmd.replace('-', '_')]
     plugin_parser = argparse.ArgumentParser()
     plugin.setup_arguments(plugin_parser)
     plugin_args = plugin_parser.parse_args(args.subargs)
