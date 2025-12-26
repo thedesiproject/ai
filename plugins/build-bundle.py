@@ -1,11 +1,10 @@
 import os
 
 
-def setup_arguments(parser):
-  parser.add_argument("-o", "--output", default="build/mega.py")
+def setup_arguments(subparser):
+  subparser.add_argument("-o", "--output", default="build/bundle.py")
 
-
-def run_task(args, config):
+def run_task(args, context):
   plugins_dir = "plugins"
   output_path = args.output
   os.makedirs(os.path.dirname(output_path), exist_ok=True)
