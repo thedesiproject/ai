@@ -73,6 +73,7 @@ def setup_arguments(subparser):
     subparser.add_argument("--sum", nargs="*", default=[])
     subparser.add_argument("--wrap")
     subparser.add_argument("--flat", action="store_true")
+    subparser.add_argument("--auto-sum-prefix", default="protocols-", help="Prefix for auto-sum keys")
 
 def run_task(args, context=None):
     try:
@@ -96,7 +97,7 @@ def run_task(args, context=None):
                 else: nested_data[key] = content
             except Exception as e: sys.stderr.write(f"SKIP: {target.name} | {str(e)}\n")
         if not args.flat:
-            if identity.startswith("protocols-"):
+            if identity.startswith(args.auto_sum_prefix):
                 s_set.add(identity)
             for key in list(nested_data.keys()):
                 content, count = apply_anchors(key, nested_data[key], l_set, s_set)
