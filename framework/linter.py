@@ -30,8 +30,8 @@ def legacy_surgical_clean(fp):
   try:
     raw = fp.read_text(encoding=config["encoding"])
     lines, valid, prev_b = raw.splitlines(), [], False
-    for i, l in enumerate(lines):
-      s = l.strip()
+    for i, line in enumerate(lines):
+      s = line.strip()
       if s.startswith("#") and not any(
         s.lower().startswith(k) for k in config["preserve"]
       ):
@@ -53,7 +53,7 @@ def legacy_surgical_clean(fp):
       ):
         valid.append("")
         prev_b = True
-      valid.append(l.rstrip())
+      valid.append(line.rstrip())
       prev_b = False
     while valid and not valid[-1]:
       valid.pop()
@@ -66,7 +66,7 @@ def legacy_surgical_clean(fp):
 def run(args):
   """Hybrid Flow: Ruff Check -> Ruff Format -> Legacy Surgical Clean."""
   base_dir = Path(__file__).parent.parent.resolve()
-  config_path = base_dir / "config" / "pyproject.toml"
+  config_path = base_dir / "pyproject.toml"
   config_args = ["--config", str(config_path)] if config_path.exists() else []
   targets = args.paths if args.paths else ["."]
   skip_norm = {s.lower() for s in config["skip"]}

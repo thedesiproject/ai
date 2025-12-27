@@ -29,8 +29,8 @@ def surgical_clean(txt):
   preserve = {"#!", "# ---", "# [start", "# [end"}
   lines = txt.splitlines()
   valid, prev_b = [], False
-  for i, l in enumerate(lines):
-    s = l.strip()
+  for i, line in enumerate(lines):
+    s = line.strip()
     if s.startswith("#") and not any(s.lower().startswith(k) for k in preserve):
       continue
     if not s:
@@ -42,7 +42,7 @@ def surgical_clean(txt):
         valid.append("")
         prev_b = True
       continue
-    valid.append(l.rstrip())
+    valid.append(line.rstrip())
     prev_b = False
   return "\n".join(valid).rstrip() + "\n"
 
@@ -145,7 +145,8 @@ def run(a):
       if a.manifest:
         atomic_write(mf_p, state, is_json=True)
       return {"status": "success", "msg": "No changes to bundle", "exit_code": 0}
-    return {"status": "error", "msg": "No files matching criteria", "exit_code": 1}
+    else:
+      return {"status": "error", "msg": "No files matching criteria", "exit_code": 1}
   if a.manifest:
     atomic_write(mf_p, state, is_json=True)
   body = "\n\n".join(items)
