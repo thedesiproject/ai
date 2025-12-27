@@ -14,16 +14,12 @@ config = {
 
 def setup(parser):
   """Configuration for both standalone and dispatcher use."""
-  parser.add_argument(
-    "paths", nargs="*", default=["."], help="Paths to lint/format"
-  )
+  parser.add_argument("paths", nargs="*", default=["."], help="Paths to lint/format")
   parser.add_argument(
     "--fix", action="store_true", help="Apply fixes and formatting in-place"
   )
   parser.add_argument(
-    "--unsafe-fixes",
-    action="store_true",
-    help="Allow ruff to apply unsafe fixes",
+    "--unsafe-fixes", action="store_true", help="Allow ruff to apply unsafe fixes"
   )
 
 def legacy_surgical_clean(fp):
@@ -43,9 +39,7 @@ def legacy_surgical_clean(fp):
       if not s:
         if (
           i + 1 < len(lines)
-          and lines[i + 1]
-          .strip()
-          .startswith(("def ", "class ", "import ", "from ", "@"))
+          and lines[i + 1].strip().startswith(("def ", "class ", "import ", "from ", "@"))
           and not prev_b
         ):
           valid.append("")
@@ -87,10 +81,7 @@ def run(args):
     if args.fix:
       fmt_cmd = [sys.executable, "-m", "ruff", "format"] + config_args + targets
       subprocess.run(
-        fmt_cmd,
-        check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        fmt_cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
       )
       for t in targets:
         tp = Path(t).resolve()

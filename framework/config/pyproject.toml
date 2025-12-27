@@ -1,6 +1,6 @@
 # --- pyproject.toml | checksum: auto ---
 [tool.ruff]
-line-length = 80
+line-length = 90
 indent-width = 2
 
 [tool.ruff.lint]
@@ -10,5 +10,5 @@ ignore = ["E401", "E701", "E501", "F401", "E722", "E741", "W291", "W292", "W293"
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-skip-magic-trailing-comma = false
+skip-magic-trailing-comma = true
 line-ending = "lf"
