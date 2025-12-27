@@ -2,23 +2,17 @@
 # --- framework/runner.py | checksum: auto ---
 import argparse, json, sys, importlib.util, os, traceback, re
 from pathlib import Path
-
 tools_dir = "tools"
 max_line = 320
-
 def low(o):
   if isinstance(o, str): return o.lower()
   if isinstance(o, list): return [low(i) for i in o]
   if isinstance(o, dict): return {k.lower(): low(v) for k, v in o.items()}
   return o
-
 def smart_format(obj, indent=0):
-  # first try to compact the current node
   flat = json.dumps(obj, separators=(",", ": "))
   if len(" " * indent + flat) <= max_line:
     return flat
-  
-  # if too long, expand based on type
   space = " " * indent
   sub = indent + 2
   if isinstance(obj, dict):
@@ -28,7 +22,6 @@ def smart_format(obj, indent=0):
     items = [smart_format(v, sub) for v in obj]
     return "[\n" + " " * sub + (",\n" + " " * sub).join(items) + "\n" + space + "]"
   return flat
-
 def main():
   os.environ["pythondontwritebytecode"] = "1"
   root = Path(__file__).parent.resolve()
@@ -54,16 +47,13 @@ def main():
   os.chdir(root.parent)
   try:
     res = {"tools": sorted(list(reg.keys()))} if args.cmd == "list" else reg[args.cmd](args)
-    # auto-flatten data key if present to reduce nesting depth
     if isinstance(res, dict) and "data" in res and len(res) == 2:
       res = {"status": res.get("status", "success"), **res["data"]}
-    
     formatted = smart_format(low(res))
     sys.stdout.write(formatted + "\n")
   except Exception as e:
     err = {"status": "error", "msg": str(e).lower()}
     if args.debug: err["trace"] = traceback.format_exc().lower()
     sys.stdout.write(json.dumps(low(err), indent=2) + "\n")
-
 if __name__ == "__main__":
   main()
