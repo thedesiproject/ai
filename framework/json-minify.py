@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# --- framework/json-tools.py | checksum: auto ---
+# --- framework/json-minify.py | checksum: auto ---
 import argparse
 import contextlib
 import json
@@ -481,7 +481,7 @@ def run(args: argparse.Namespace, context: Optional[Dict] = None) -> Dict[str, A
 def main() -> None:
   """Standalone CLI entry point."""
   parser = argparse.ArgumentParser(
-    prog="json-tools", description="JSON/CSV optimization framework"
+    prog="json-minify", description="JSON/CSV optimization framework"
   )
   setup(parser)
   args = parser.parse_args()

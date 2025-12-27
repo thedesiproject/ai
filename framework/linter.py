@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-# --- framework/tools/linter.py | checksum: auto ---
+# --- framework/linter.py | checksum: auto ---
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
+os.environ["RUFF_NO_CACHE"] = "true"
 config = {
   "skip": {".git", "node_modules", "__pycache__", "venv", ".venv", "build", "dist"},
   "preserve": {"#!", "# ---", "# [start", "# [end"},

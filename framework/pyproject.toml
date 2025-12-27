@@ -1,4 +1,4 @@
-# --- pyproject.toml | checksum: auto ---
+# --- framework/pyproject.toml | checksum: auto ---
 [tool.ruff]
 line-length = 90
 indent-width = 2

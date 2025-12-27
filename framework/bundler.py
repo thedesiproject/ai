@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# --- framework/tools/bundler.py | checksum: auto ---
+# --- framework/bundler.py | checksum: auto ---
 import argparse
 import contextlib
 import hashlib
