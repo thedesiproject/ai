@@ -2,7 +2,7 @@
   "orchestration": {
     "version": "1.0.0",
     "state": "LOCKED",
-    "rules-version": "7.1.0",
+    "rules-version": "1.0.0",
     "key-map": {
       "p": "protocols",
       "v": "validators",
@@ -105,7 +105,7 @@
       "parse": "EXTRACT-state; MERGE-loaded; DETECT-deltas; APPLY(R03,R12,R15)",
       "verify": "VERIFY(hash-stable AND rules-count-match AND protocols-count-match)→counts-verified; IF-false→RESTART",
       "diff": "ENFORCE(R73); RECONSTRUCT-latest-state()→state; EXTRACT-diff(state,target)→diff; REJECT(unchanged-keys,metadata-keys); OUTPUT(diff-only); GATE(strict-diff)",
-      "output": "ENFORCE(R16,R74,R95); SCAN(pattern=/current|optimal|meta|status|findings/); IF-match→HALT; OUTPUT(literal-json-only); VERIFY(start={,end=},no-prose); GATE(zero-prose,format-clean)"
+      "output": "ENFORCE(R16,R74,R95); OUTPUT(literal-json-only); VERIFY(start={,end=},no-prose); GATE(zero-prose,format-clean)"
     },
     "structure-hints": {
       "rules-source": "rules.json#/rules",
@@ -122,10 +122,10 @@
       "baseline-protocols-count": null,
       "baseline-hash": null,
       "bootstrap-lock": true,
-      "rules-version-tracking": "7.1.0",
       "max-session-lines": 7,
-      "max-output-tokens": 120,
-      "escalate-tokens": "300-500"
+      "convergence-threshold": "100-percent-bit-perfect",
+      "punitive-mode-enabled": false,
+      "max-output-violations": 3
     },
     "overlay-system": {
       "execution-model": "overlay-first-then-core",
@@ -148,7 +148,7 @@
         "literal-data-only|R74"
       ],
       "preconditions-locked": true,
-      "abort": "IF(start-char!={||last-char!=}||SCAN(/current|optimal|meta|findings|status/)||hash-mismatch||violation(R73)||violation(R74)||violation(R95)||violation(R96)||line-count>7||prose-detected||format-overhead){LOG(rule-id);HALT}|R02|R05|R07",
+      "abort": "IF(start-char!={||last-char!=}||hash-mismatch||violation(R73)||violation(R74)||violation(R95)||violation(R96)||line-count>7||prose-detected||format-overhead||violation(R101)||violation(R102)||violation(R105)){LOG(rule-id);HALT}|R02|R05|R07",
       "recovery": "IF(halted||violation-detected){RESTART-reparse}|R13",
       "recovery-locked": true,
       "audit-violations": "detect-r84-r109-violations|R92|R93|R94"
@@ -173,7 +173,9 @@
       "output-gate": ["R16", "R74", "R95", "R96", "R97", "R100"],
       "integrity-gate": ["R02", "R72", "R73", "R76", "R77"],
       "convergence-gate": ["R101", "R102", "R103", "R104", "R105"],
-      "audit-gate": ["R84", "R85", "R92", "R93", "R94"]
+      "llm-behavior-gate": ["R92", "R93", "R94", "R98", "R99", "R100"],
+      "punitive-mode-gate": ["R105", "R106", "R107", "R108", "R109"],
+      "audit-gate": null
     },
     "handshake-contract": {
       "emit-format": "{\"rules-count\":N,\"protocols-count\":M,\"hash\":SHA256,\"rules-version\":\"7.1.0\",\"status\":\"ready\"}",
