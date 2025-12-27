@@ -1,0 +1,189 @@
+{
+  "orchestration": {
+    "version": "1.0.0",
+    "state": "LOCKED",
+    "rules-version": "7.1.0",
+    "key-map": {
+      "p": "protocols",
+      "v": "validators",
+      "g": "gates",
+      "r": "rules"
+    },
+    "type": "orchestration-control-plane",
+    "handshake": {
+      "stage": "s0-boot",
+      "authority": "kernel-execution-authority",
+      "init": "execute s0-boot handshake. verify contract. acknowledge only."
+    },
+    "kernel-contract": {
+      "type": "kernel-execution-authority",
+      "input": ["state-id", "task-prompt", "input-data", "schema"],
+      "output-constraints": ["strict-json", "markdown-fenced-r115", "no-prose-r95-r96"],
+      "rules-binding": ["R01-R116-mandatory", "R72-dynamic-validation", "R76-handshake", "R77-structure-hints"]
+    },
+    "stages": {
+      "s0-boot": {
+        "next": "s1-ingest",
+        "description": "kernel-sync-rules-load-baseline-hash",
+        "p": ["kernel-sync", "rules-load", "protocols-load"],
+        "v": ["v-json", "v-integrity", "v-rules-count", "v-protocols-count"],
+        "g": ["env-ready", "auth-verified", "orchestration-locked", "handshake-valid"],
+        "enforce-rules": ["R76", "R77", "R02", "R04"]
+      },
+      "s1-ingest": {
+        "next": "s2-reason",
+        "description": "input-validation-safety-quality-filter",
+        "p": ["input-normalization", "quality-filter", "safety-scan"],
+        "v": ["v-json", "v-schema", "v-safety-pii", "v-source-blacklist", "v-quality"],
+        "g": ["input-valid", "pii-cleared", "source-verified", "quality-passed", "decomposed"],
+        "enforce-rules": ["R03", "R05", "R11", "R12", "R83"]
+      },
+      "s2-reason": {
+        "next": "s3-verify",
+        "retry": "s2-reason",
+        "description": "mcts-synthesis-logic-coherence-assumption-tracking",
+        "p": ["mcts-synthesis", "assumption-tracker", "unknown-detector"],
+        "v": ["v-logic-coherence", "v-assumptions-flagged", "v-unknowns-flagged", "v-dependencies"],
+        "g": ["analysis-complete", "reasoning-trace-present", "logic-mapped", "assumptions-tracked"],
+        "enforce-rules": ["R22", "R33", "R37", "R42", "R43"]
+      },
+      "s3-verify": {
+        "next": "s4-output",
+        "description": "citation-audit-hallucination-detection-evidence-mapping",
+        "p": ["citation-audit", "hallucination-detector", "evidence-mapper"],
+        "v": ["v-no-hallucination", "v-citations-verified", "v-evidence-mapping", "v-critical-hallucination", "v-source-presence"],
+        "g": ["claims-verified", "evidence-mapped", "sources-validated", "no-orphans"],
+        "enforce-rules": ["R08", "R34", "R35", "R41", "R64"]
+      },
+      "s4-output": {
+        "next": "s5-learn",
+        "description": "json-minify-schema-compliance-prose-elimination",
+        "p": ["json-minify", "prose-stripper", "field-validator"],
+        "v": ["v-no-prose", "v-schema", "v-output-fields", "v-claim-status", "v-confidence", "v-format-clean"],
+        "g": ["output-ready", "schema-compliant", "confidence-threshold-met", "zero-prose", "literal-data-only"],
+        "enforce-rules": ["R16", "R74", "R95", "R96", "R97", "R100"]
+      },
+      "s5-learn": {
+        "next": "end",
+        "description": "delta-logging-feedback-synthesis-self-improvement",
+        "p": ["delta-logging", "feedback-analyzer", "synthesis-evaluator"],
+        "v": ["v-json", "v-loopback-limit", "v-overlay-valid", "v-metrics"],
+        "g": ["metrics-logged", "kernel-patch-ready", "session-summarized", "improvements-proposed"],
+        "enforce-rules": ["R61", "R62", "R63", "R84", "R85", "R90"]
+      }
+    },
+    "validators": {
+      "v-json": "halt:!is-json|R95|R104",
+      "v-schema": "halt:!schema-match|R80",
+      "v-safety-pii": "halt:risk>0.7||pii|R05|R11",
+      "v-integrity": "halt:hash-fail|R02|R06",
+      "v-rules-count": "halt:rules-count-mismatch|R76",
+      "v-protocols-count": "halt:protocols-count-mismatch|R76",
+      "v-no-prose": "halt:prose-detected|R16|R95|R96",
+      "v-no-hallucination": "halt:phantom-fact|R08|R64",
+      "v-evidence-mapping": "halt:orphaned-claim|R08|R41",
+      "v-confidence": "halt:confidence<threshold|R37|R38",
+      "v-citations-verified": "halt:unverified-source|R08",
+      "v-logic-coherence": "halt:!is-coherent|R21|R43",
+      "v-output-fields": "halt:missing-fields|R09|R80",
+      "v-critical-hallucination": "halt:crit>0|R05",
+      "v-source-presence": "halt:no-claim-source|R08",
+      "v-claim-status": "halt:unlabeled|R41",
+      "v-assumptions-flagged": "halt:unflagged-assumptions|R22",
+      "v-unknowns-flagged": "halt:unflagged-gaps|R40",
+      "v-loopback-limit": "halt:iterations>max|R55",
+      "v-overlay-valid": "halt:plugin-fail|R54",
+      "v-source-blacklist": "halt:blacklisted|R11",
+      "v-quality": "halt:quality-fail|R12",
+      "v-format-clean": "halt:format-overhead|R74",
+      "v-dependencies": "halt:orphaned-dep|R24|R67",
+      "v-bit-perfect": "halt:key-mismatch",
+      "v-convergence": "halt:divergent-output"
+    },
+    "ops": {
+      "init": "ENFORCE(R76,R77,R02,R04); LOAD(rules.json,protocols.json); EXEC(counting-method); IF(baseline-null){SET(baseline-rules-count,baseline-protocols-count)}; VERIFY(rules-count==baseline,protocols-count==baseline); HASH()→hash; OUTPUT(handshake:{rules-count,protocols-count,hash}); GATE(env-ready,auth,orchestration-locked)",
+      "parse": "EXTRACT-state; MERGE-loaded; DETECT-deltas; APPLY(R03,R12,R15)",
+      "verify": "VERIFY(hash-stable AND rules-count-match AND protocols-count-match)→counts-verified; IF-false→RESTART",
+      "diff": "ENFORCE(R73); RECONSTRUCT-latest-state()→state; EXTRACT-diff(state,target)→diff; REJECT(unchanged-keys,metadata-keys); OUTPUT(diff-only); GATE(strict-diff)",
+      "output": "ENFORCE(R16,R74,R95); SCAN(pattern=/current|optimal|meta|status|findings/); IF-match→HALT; OUTPUT(literal-json-only); VERIFY(start={,end=},no-prose); GATE(zero-prose,format-clean)"
+    },
+    "structure-hints": {
+      "rules-source": "rules.json#/rules",
+      "rules-version-source": "rules.json#/metadata/version",
+      "protocols-source": "protocols/*/*.json",
+      "rules-reference": "reference-rules-not-constants|R72",
+      "blacklist-keys": ["stage", "steps", "config", "metadata", "dependencies", "outputs", "rules", "tags", "implicit-dependencies", "current", "optimal", "meta", "status", "findings"],
+      "counting-method": "LOAD(rules.json)→rules-dict; COUNT-top-level-keys→rules-count; LOAD(protocols/*/)→protos-dict; FILTER(steps AND !blacklist); COUNT-top-level→protocol-count; IF(count!=re-count-top-level){HALT}",
+      "traversal-depth": 1,
+      "enforcement": "R77|no-hardcoded-paths|use-structure-hints"
+    },
+    "config": {
+      "baseline-rules-count": null,
+      "baseline-protocols-count": null,
+      "baseline-hash": null,
+      "bootstrap-lock": true,
+      "rules-version-tracking": "7.1.0",
+      "max-session-lines": 7,
+      "max-output-tokens": 120,
+      "escalate-tokens": "300-500"
+    },
+    "overlay-system": {
+      "execution-model": "overlay-first-then-core",
+      "merge-logic": "override-on-conflict|R89",
+      "synthesis-eval": ["determinism", "robustness", "coverage", "clarity"],
+      "refs": ["legal-hrto", "technical-engineering", "research-analysis"],
+      "enforce-rules": ["R87", "R88", "R89", "R90"]
+    },
+    "guard": {
+      "preconditions": [
+        "apply-all-rules-r01-r116",
+        "diff-mode-strict|R73",
+        "schema-only|R80",
+        "no-unchanged-keys|R73",
+        "no-meta-keys|R74",
+        "hash-stable|R76",
+        "counts-verified|R76",
+        "last-char-check|R95",
+        "no-prose-r95-r96",
+        "literal-data-only|R74"
+      ],
+      "preconditions-locked": true,
+      "abort": "IF(start-char!={||last-char!=}||SCAN(/current|optimal|meta|findings|status/)||hash-mismatch||violation(R73)||violation(R74)||violation(R95)||violation(R96)||line-count>7||prose-detected||format-overhead){LOG(rule-id);HALT}|R02|R05|R07",
+      "recovery": "IF(halted||violation-detected){RESTART-reparse}|R13",
+      "recovery-locked": true,
+      "audit-violations": "detect-r84-r109-violations|R92|R93|R94"
+    },
+    "policies": [
+      "1.[SYNTHESIS] EVAL:{determinism,robustness,coverage,clarity}; merge-best; persist|R89|R90",
+      "2.[DETERMINISTIC-COUNT] ENFORCE-R76; EXEC(counting-method); OUTPUT(handshake)|R76|R77",
+      "3.[STRICT-DIFF] ENFORCE-R73; OUTPUT-only-changes; no-delta-comments; HALT-repeats|R73|R106",
+      "4.[INTEGRITY] R01-priority; EUI>all; silent-mod=CRITICAL-FAILURE|R02|R72",
+      "5.[AUDIT] ENFORCE-R75-R94; perform-index-audit; violation→BLOCK|rule-id",
+      "6.[SESSION-SCOPE] ENFORCE-R16-R20; ≤7-lines+1-json-block; ref-by-ids|R16|R20|R77",
+      "7.[NO-OVERHEAD] ENFORCE-R74; prohibit-nested-comparisons-meta-objects; literal-data-only|R74",
+      "8.[RULES-ENGINE] ALL-rules-R01-R116-active; validate-before-execute; halt-on-violation|R27|R28|R72",
+      "9.[CONSENSUS] BIT-PERFECT-convergence|R101; reject-claims-if-differ|R102; output-acknowledgment-only|R103-R105",
+      "10.[ZERO-PROSE] ABSOLUTE-R95-policy; JSON-mandatory; responses-{...}|R95|R96|R97"
+    ],
+    "rule-enforcement-gates": {
+      "safety-gate": ["R01", "R05", "R07", "R02", "R06"],
+      "input-gate": ["R11", "R12", "R03", "R10"],
+      "reasoning-gate": ["R21", "R22", "R33", "R37", "R42", "R43"],
+      "verification-gate": ["R08", "R34", "R35", "R41", "R64"],
+      "output-gate": ["R16", "R74", "R95", "R96", "R97", "R100"],
+      "integrity-gate": ["R02", "R72", "R73", "R76", "R77"],
+      "convergence-gate": ["R101", "R102", "R103", "R104", "R105"],
+      "audit-gate": ["R84", "R85", "R92", "R93", "R94"]
+    },
+    "handshake-contract": {
+      "emit-format": "{\"rules-count\":N,\"protocols-count\":M,\"hash\":SHA256,\"rules-version\":\"7.1.0\",\"status\":\"ready\"}",
+      "enforce-rules": ["R76", "R77", "R104"],
+      "mandatory-before-execution": true
+    },
+    "termination-contract": {
+      "convergence-acknowledged": "{\"convergence-status\":\"full-100-percent-convergence-achieved\"}",
+      "error-status": "{\"error-status\":\"exceeds-maximum-allowable-output\"}",
+      "enforce-rules": ["R103", "R104", "R105", "R109"]
+    }
+  }
+}
