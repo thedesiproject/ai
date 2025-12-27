@@ -4,8 +4,9 @@ line-length = 320
 indent-width = 2
 
 [tool.ruff.lint]
-select = ["e", "f", "w", "era"]
+select = ["e", "f", "w", "era", "i", "sim"]
 ignore = ["e401", "e701", "e501", "f401", "e722", "e741", "w291", "w292", "w293"]
+fixable = ["all"]
 
 [tool.ruff.format]
 quote-style = "double"
