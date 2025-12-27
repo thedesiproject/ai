@@ -2,6 +2,7 @@
 # --- framework/linter.py | checksum: auto ---
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -11,7 +12,7 @@ config = {
   "skip": {".git", "node_modules", "__pycache__", "venv", ".venv", "build", "dist"},
   "preserve": {"#!", "# ---", "# [start", "# [end"},
   "indent": 2,
-  "encoding": "utf-8",
+  "encoding": "utf-8"
 }
 
 def setup(parser):
@@ -31,6 +32,7 @@ def legacy_surgical_clean(fp):
   """
   try:
     raw = fp.read_text(encoding=config["encoding"])
+    raw = re.sub(r",\n(\s*[}\]])", r"\n\1", raw)
     lines, valid, prev_b = raw.splitlines(), [], False
     for i, line in enumerate(lines):
       s = line.strip()

@@ -15,7 +15,7 @@ config = {
   "default_extensions": {".py", ".json"},
   "hash_length": 16,
   "encoding": "utf-8",
-  "encoding_errors": "ignore",
+  "encoding_errors": "ignore"
 }
 
 def get_hash(s, algo="sha256"):
@@ -160,7 +160,7 @@ def run(a):
     "total": len(fs),
     "bundled": len(items),
     "warnings": warnings,
-    "exit_code": 0,
+    "exit_code": 0
   }
 
 def main():

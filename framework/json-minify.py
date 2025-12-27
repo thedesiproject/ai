@@ -167,7 +167,7 @@ class KeyedJSONConverter:
         "_schema": {
           "format": f"keyed_json:{key_field}",
           "key_field": key_field,
-          "fields": [],
+          "fields": []
         }
       }
     field_order, seen = [], set()
@@ -180,7 +180,7 @@ class KeyedJSONConverter:
       "_schema": {
         "format": f"keyed_json:{key_field}",
         "key_field": key_field,
-        "fields": field_order,
+        "fields": field_order
       }
     }
     for rec in records:
@@ -379,7 +379,7 @@ def run(args: argparse.Namespace, context: Optional[Dict] = None) -> Dict[str, A
         "keymap_entries": len(km),
         "savings_pct": round(savings, 1),
         "keymap_file": str(args.key_map) if args.key_map else None,
-        "exit_code": 0,
+        "exit_code": 0
       }
     elif args.mode == "minify":
       km = {}
@@ -435,14 +435,14 @@ def run(args: argparse.Namespace, context: Optional[Dict] = None) -> Dict[str, A
         "files_processed": len(files),
         "avg_savings_pct": round(total_savings / len(files) if files else 0, 1),
         "results": results,
-        "exit_code": 0,
+        "exit_code": 0
       }
     elif args.mode == "expand":
       if not args.key_map or not args.key_map.exists():
         return {
           "status": "error",
           "message": "--key-map required for expand mode",
-          "exit_code": 1,
+          "exit_code": 1
         }
       km = json.loads(args.key_map.read_text(encoding=enc))
       rev_km = {v: k for k, v in km.items()}
@@ -472,7 +472,7 @@ def run(args: argparse.Namespace, context: Optional[Dict] = None) -> Dict[str, A
         "mode": "expand",
         "files_processed": len(files),
         "results": results,
-        "exit_code": 0,
+        "exit_code": 0
       }
   except Exception as e:
     print(f"System Error: {e}", file=sys.stderr)
