@@ -168,7 +168,11 @@ def main():
   setup(parser)
   args = parser.parse_args()
   result = run(args)
-  print(json.dumps(result, indent=2))
+  warnings = result.get("warnings", [])
+  if warnings:
+    print(f" ({len(warnings)} warning{'s' if len(warnings) > 1 else ''})")
+  else:
+    print()
   sys.exit(result.get("exit_code", 0))
 if __name__ == "__main__":
   main()
