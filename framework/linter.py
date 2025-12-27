@@ -41,7 +41,9 @@ def legacy_surgical_clean(fp):
       if not s:
         if (
           i + 1 < len(lines)
-          and lines[i + 1].strip().startswith(("def ", "class ", "import ", "from ", "@"))
+          and lines[i + 1]
+          .strip()
+          .startswith(("def ", "class ", "import ", "from ", "@", "if __name__"))
           and not prev_b
         ):
           valid.append("")
@@ -103,5 +105,6 @@ def main():
   args = parser.parse_args()
   outcome = run(args)
   sys.exit(outcome["exit_code"])
+
 if __name__ == "__main__":
   main()
