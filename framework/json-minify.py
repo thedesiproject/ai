@@ -487,5 +487,6 @@ def main() -> None:
   args = parser.parse_args()
   outcome = run(args, context=None)
   sys.exit(outcome.get("exit_code", 1))
+
 if __name__ == "__main__":
   main()

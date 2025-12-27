@@ -174,5 +174,6 @@ def main():
   else:
     print()
   sys.exit(result.get("exit_code", 0))
+
 if __name__ == "__main__":
   main()
